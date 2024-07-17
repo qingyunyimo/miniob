@@ -431,7 +431,7 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   char* currData = (char*) data;
   for(int i = 0; i<page_header_->column_num; i++){
     int curColIdx = colIdx[i];
-    int index = bitmap.next_unsetted_bit(curColIdx);
+    int index = bitmap.next_unsetted_bit(curColIdx-page_header_->data_offset);
     bitmap.set_bit(index);
 
     char* currCol = get_field_data(rid->slot_num, curColIdx);
@@ -439,12 +439,12 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), currData);
     if (OB_FAIL(rc)) {
       LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
-       return rc; // ignore errors
+      return rc; // ignore errors
     }
     currData += field_size;
   }
   page_header_->record_num++;
-  exit(-1);
+  return RC::SUCCESS;
 }
 
 RC PaxRecordPageHandler::delete_record(const RID *rid)
