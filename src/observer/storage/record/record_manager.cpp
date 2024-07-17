@@ -432,7 +432,7 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   for(int i = 0; i<page_header_->column_num; i++){
     int curColIdx = colIdx[i];
     //int index = bitmap.next_unsetted_bit(curColIdx - curColIdx-page_header_->data_offset);
-    int index = bitmap.next_unsetted_bit(rid->slot_num);
+    int index = bitmap.next_unsetted_bit(0);
     bitmap.set_bit(index);
 
     char* currCol = get_field_data(rid->slot_num, curColIdx);
