@@ -439,7 +439,7 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
     if (OB_FAIL(rc)) {
       LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
-      return rc; // ignore errors
+      //return rc; // ignore errors
     }
 
     char* currCol = get_field_data(rid->slot_num, i);
@@ -502,7 +502,9 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     fullrecord += fieldLen;
   }
 
-  record.set_data(fullrecord, page_header_->record_real_size);
+  //record.set_data(fullrecord, page_header_->record_real_size);
+  record.copy_data(fullrecord, page_header_->record_real_size);
+  free(fullrecord);
   return RC::SUCCESS;
   //exit(-1);
 }
