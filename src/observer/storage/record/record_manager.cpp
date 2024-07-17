@@ -426,9 +426,9 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   }
   
   Bitmap bitmap(bitmap_, page_header_->record_capacity);
-  int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
+  //int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
   //int field_size = page_header_->record_real_size/ page_header_->column_num;
-  int index = bitmap.next_unsetted_bit(0);
+  int index = bitmap.next_unsetted_bit(rid->slot_num);
   bitmap.set_bit(index);
   char* currData = (char*) data;
   int recordOffset = 0;
@@ -436,15 +436,16 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     //int curColIdx = colIdx[i];
     //int index = bitmap.next_unsetted_bit(curColIdx - curColIdx-page_header_->data_offset);
     
-
-    char* currCol = get_field_data(rid->slot_num, i);
-    int fieldLen =  get_field_len(i);
-    memcpy(currCol, currData + recordOffset, fieldLen);
     RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
     if (OB_FAIL(rc)) {
       LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
       return rc; // ignore errors
     }
+
+    char* currCol = get_field_data(rid->slot_num, i);
+    int fieldLen =  get_field_len(i);
+    memcpy(currCol, currData + recordOffset, fieldLen);
+    
     recordOffset += fieldLen;
   }
   page_header_->record_num++;
