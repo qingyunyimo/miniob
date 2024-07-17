@@ -491,7 +491,7 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
   char* fullrecord = (char*) malloc(page_header_->record_real_size);
   
   for(int i = 0; i<page_header_->column_num; i++){
-    int fieldLen = get_field_len(0);
+    int fieldLen = get_field_len(i);
     char* currCol = get_field_data(rid.slot_num, i);
     
     memcpy(fullrecord, currCol, fieldLen);
