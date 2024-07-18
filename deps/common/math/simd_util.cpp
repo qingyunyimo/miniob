@@ -60,7 +60,7 @@ float mm256_sum_ps(const float *values, int size)
       __m256 vec = _mm256_loadu_ps(&values[i]); // Load 16 floats
       sum_vec = _mm256_add_ps(sum_vec, vec); // Add to sum vector
   }
-  _mm256_store_ps((__m256*)TmpRes, sum_vec);
+  _mm256_store_ps(TmpRes, sum_vec);
   for(int m = 0; m<8;m++){
     sum += TmpRes[m];
   }
