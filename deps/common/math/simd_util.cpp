@@ -25,7 +25,7 @@ int mm256_sum_epi32(const int *values, int size)
     // your code here
     int PORTABLE_ALIGN32 TmpRes[8] = {0};
     int sum = 0;
-    __m256i sum_vec = _mm256_setzero_si256(); // Initialize sum vector to zero
+    __m256i sum_vec = _mm256_setzero_si256(0); // Initialize sum vector to zero
 
     int i = 0;
 
@@ -52,7 +52,7 @@ float mm256_sum_ps(const float *values, int size)
 {
   // your code here
   float PORTABLE_ALIGN32 TmpRes[8] = {0};
-  __m256 sum_vec = _mm256_setzero_ps();
+  __m256 sum_vec = _mm256_setzero_ps(0);
   float sum = 0;
   int i = 0;
 
