@@ -27,23 +27,12 @@ int mm256_sum_epi32(const int *values, int size)
   __m256i sum_vec = _mm256_setzero_si256(); // Initialize sum vector to zero
 
     int i = 0;
-    // Process 8 elements at a time
-    for (; i <= size - 8; i += 8) {
+    
+    for (; i < size; i += 16) {
         __m256i vec = _mm256_loadu_si256((__m256i*)&values[i]); // Load 8 integers
         sum_vec = _mm256_add_epi32(sum_vec, vec); // Add to sum vector
     }
-
-    // Horizontal sum of sum_vec
-    __m128i low = _mm256_castsi256_si128(sum_vec); // Get lower 128 bits
-    __m128i high = _mm256_extracti128_si256(sum_vec, 1); // Get upper 128 bits
-    low = _mm_add_epi32(low, high); // Add lower and upper parts
-
-    // Further horizontal sum within 128-bit part
-    low = _mm_hadd_epi32(low, low);
-    low = _mm_hadd_epi32(low, low);
-
-    int sum = _mm_cvtsi128_si32(low); // Extract the final sum
-    // Handle remaining elements
+    i = i - 16;
     for (; i < size; ++i) {
         sum += values[i];
     }
@@ -56,21 +45,12 @@ float mm256_sum_ps(const float *values, int size)
   // your code here
   __m256 sum_vec = _mm256_setzero_ps();
   int i = 0;
-  // Process 8 elements at a time
-  for (; i <= size - 8; i += 8) {
+
+  for (; i < size; i += 16) {
       __m256 vec = _mm256_loadu_ps(&values[i]); // Load 8 floats
       sum_vec = _mm256_add_ps(sum_vec, vec); // Add to sum vector
   }
-  __m128 low = _mm256_castps256_ps128(sum_vec); // Get lower 128 bits
-  __m128 high = _mm256_extractf128_ps(sum_vec, 1); // Get upper 128 bits
-  low = _mm_add_ps(low, high); // Add lower and upper parts
-
-  // Further horizontal sum within 128-bit part
-  low = _mm_hadd_ps(low, low);
-  low = _mm_hadd_ps(low, low);
-
-  float sum = _mm_cvtss_f32(low); // Extract the final sum
-
+  i = i -16;
   for (; i < size; ++i) {
       sum += values[i];
   }
