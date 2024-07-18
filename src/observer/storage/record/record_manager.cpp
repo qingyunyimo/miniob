@@ -424,31 +424,41 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     LOG_WARN("Page is full, page_num %d:%d.", disk_buffer_pool_->file_desc(), frame_->page_num());
     return RC::RECORD_NOMEM;
   }
+
+  RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
+    
+  if (OB_FAIL(rc)) {
+    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+    //return rc; // ignore errors
+  }
   
   Bitmap bitmap(bitmap_, page_header_->record_capacity);
   //int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
   //int field_size = page_header_->record_real_size/ page_header_->column_num;
-  int index = bitmap.next_unsetted_bit(rid->slot_num);
+  int index = bitmap.next_unsetted_bit(0);
   bitmap.set_bit(index);
-  char* currData = (char*) data;
+  //char* currData = (char*) data;
   int recordOffset = 0;
   for(int i = 0; i<page_header_->column_num; i++){
+    
     //int curColIdx = colIdx[i];
     //int index = bitmap.next_unsetted_bit(curColIdx - curColIdx-page_header_->data_offset);
     
-    RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
-    if (OB_FAIL(rc)) {
-      LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
-      //return rc; // ignore errors
-    }
-
-    char* currCol = get_field_data(rid->slot_num, i);
+    
+    
+    char* currCol = get_field_data(index, i);
+   
     int fieldLen =  get_field_len(i);
-    memcpy(currCol, currData + recordOffset, fieldLen);
+    
+    memcpy(currCol, data + recordOffset, fieldLen);
     
     recordOffset += fieldLen;
   }
   page_header_->record_num++;
+  if (rid) {
+    rid->page_num = get_page_num();
+    rid->slot_num = index;
+  }
   return RC::SUCCESS;
 }
 
@@ -478,7 +488,9 @@ RC PaxRecordPageHandler::delete_record(const RID *rid)
 
 RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 {
-  // your code here
+  // your code herestd::cerr<<"test"<<std::endl;
+
+  
   if (rid.slot_num >= page_header_->record_capacity) {
     LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
               rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
@@ -490,10 +502,8 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     LOG_ERROR("Invalid slot_num:%d, slot is empty, page_num %d.", rid.slot_num, frame_->page_num());
     return RC::RECORD_NOT_EXIST;
   }
-
   record.set_rid(rid);
-  char* fullrecord = (char*) malloc(page_header_->record_real_size);
-  
+  char* fullrecord = (char*) malloc(page_header_.record_real_size);
   for(int i = 0; i<page_header_->column_num; i++){
     int fieldLen = get_field_len(i);
     char* currCol = get_field_data(rid.slot_num, i);
@@ -501,10 +511,9 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     memcpy(fullrecord, currCol, fieldLen);
     fullrecord += fieldLen;
   }
-
-  //record.set_data(fullrecord, page_header_->record_real_size);
-  record.copy_data(fullrecord, page_header_->record_real_size);
-  free(fullrecord);
+  record.set_data(fullrecord, page_header_->record_real_size);
+  //record.copy_data(fullrecord, page_header_->record_size);
+  //free(fullrecord);
   return RC::SUCCESS;
   //exit(-1);
 }
@@ -514,10 +523,18 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   // your code here
   int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
-  for(int i =0; i < page_header_->column_num; i++){
+  int totalcols =  page_header_->column_num();
+  for(int i =0; i < totalcols; i++){
     int id = chunk.column_ids(i);
+    //int fieldLen = get_field_len(id);
     Column *currCol = chunk.column_ptr(id);
-    currCol->append(frame_->data() + page_header_->data_offset + colIdx[i], page_header_->record_num);
+    //currCol.
+    if(id==0){
+      currCol->append(frame_->data() + page_header_->data_offset, page_header_->record_num);
+    }else{
+      currCol->append(frame_->data() + page_header_->data_offset + colIdx[id-1], page_header_->record_num);
+    }
+    
   }
   return RC::SUCCESS;
   //exit(-1);
