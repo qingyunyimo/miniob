@@ -513,7 +513,7 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     memcpy(fullrecord, currCol, fieldLen);
     fullrecord += fieldLen;
   }
-  record.set_data(fullrecord, page_header_->record_real_size);
+  record.set_data_owner(fullrecord, page_header_->record_real_size);
   //record.copy_data(fullrecord, page_header_->record_size);
   //free(fullrecord);
   return RC::SUCCESS;
