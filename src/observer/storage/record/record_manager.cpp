@@ -425,18 +425,20 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     return RC::RECORD_NOMEM;
   }
 
-  RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
-    
-  if (OB_FAIL(rc)) {
-    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
-    //return rc; // ignore errors
-  }
+  
   
   Bitmap bitmap(bitmap_, page_header_->record_capacity);
   //int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
   //int field_size = page_header_->record_real_size/ page_header_->column_num;
   int index = bitmap.next_unsetted_bit(0);
   bitmap.set_bit(index);
+
+  RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
+     
+  if (OB_FAIL(rc)) {
+    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+    //return rc; // ignore errors
+  }
   //char* currData = (char*) data;
   int recordOffset = 0;
   for(int i = 0; i<page_header_->column_num; i++){
@@ -503,7 +505,7 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     return RC::RECORD_NOT_EXIST;
   }
   record.set_rid(rid);
-  char* fullrecord = (char*) malloc(page_header_.record_real_size);
+  char* fullrecord = (char*) malloc(page_header_->record_real_size);
   for(int i = 0; i<page_header_->column_num; i++){
     int fieldLen = get_field_len(i);
     char* currCol = get_field_data(rid.slot_num, i);
@@ -523,7 +525,7 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   // your code here
   int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
-  int totalcols =  page_header_->column_num();
+  int totalcols =  chunk.column_num();
   for(int i =0; i < totalcols; i++){
     int id = chunk.column_ids(i);
     //int fieldLen = get_field_len(id);
