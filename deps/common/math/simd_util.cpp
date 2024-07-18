@@ -22,14 +22,14 @@ int mm256_extract_epi32_var_indx(const __m256i vec, const unsigned int i)
 
 int mm256_sum_epi32(const int *values, int size)
 {
-  // your code here
-  int PORTABLE_ALIGN32 TmpRes[8];
-  int sum = 0;
-  __m256i sum_vec = _mm256_setzero_si256(); // Initialize sum vector to zero
+    // your code here
+    int PORTABLE_ALIGN32 TmpRes[8];
+    int sum = 0;
+    __m256i sum_vec = _mm256_setzero_si256(); // Initialize sum vector to zero
 
     int i = 0;
-    
-    for (; i < size; i += 8) {
+
+    for (; i <= size - 8; i += 8) {
         __m256i vec = _mm256_loadu_si256((__m256i*)&values[i]); // Load 16 integers
         sum_vec = _mm256_add_epi32(sum_vec, vec); // Add to sum vector
     }
@@ -56,7 +56,7 @@ float mm256_sum_ps(const float *values, int size)
   float sum = 0;
   int i = 0;
 
-  for (; i < size; i += 8) {
+  for (; i <= size - 8; i += 8) {
       __m256 vec = _mm256_loadu_ps(&values[i]); // Load 16 floats
       sum_vec = _mm256_add_ps(sum_vec, vec); // Add to sum vector
   }
