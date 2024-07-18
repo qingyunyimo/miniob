@@ -39,7 +39,6 @@ int mm256_sum_epi32(const int *values, int size)
     for(int m = 0; m<8;m++){
       sum += TmpRes[m];
     }
-    i = i - 8;
 
     for (; i < size; ++i) {
         sum += values[i];
@@ -57,14 +56,13 @@ float mm256_sum_ps(const float *values, int size)
   int i = 0;
 
   for (; i <= size - 8; i += 8) {
-      __m256 vec = _mm256_loadu_ps(&values[i]); // Load 16 floats
+      __m256 vec = _mm256_loadu_ps(&values[i]); // Load 8 floats
       sum_vec = _mm256_add_ps(sum_vec, vec); // Add to sum vector
   }
   _mm256_store_ps(TmpRes, sum_vec);
   for(int m = 0; m<8;m++){
     sum += TmpRes[m];
   }
-  i = i -8;
   for (; i < size; ++i) {
       sum += values[i];
   }
