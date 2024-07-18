@@ -457,6 +457,7 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
     recordOffset += fieldLen;
   }
   page_header_->record_num++;
+  frame_->mark_dirty();
   if (rid) {
     rid->page_num = get_page_num();
     rid->slot_num = index;
@@ -506,12 +507,13 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
   }
   record.set_rid(rid);
   char* fullrecord = (char*) malloc(page_header_->record_real_size);
+  char* recordOffset = fullrecord;
   for(int i = 0; i<page_header_->column_num; i++){
     int fieldLen = get_field_len(i);
     char* currCol = get_field_data(rid.slot_num, i);
     
-    memcpy(fullrecord, currCol, fieldLen);
-    fullrecord += fieldLen;
+    memcpy(recordOffset, currCol, fieldLen);
+    recordOffset += fieldLen;
   }
   record.set_data_owner(fullrecord, page_header_->record_real_size);
   //record.copy_data(fullrecord, page_header_->record_size);
@@ -524,12 +526,32 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   // your code here
+  
+  vector<int> slots;
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  int next_bit = bitmap.next_setted_bit(0);
+  while (next_bit != -1 ) {
+    slots.push_back(next_bit);
+    next_bit = bitmap.next_setted_bit(next_bit+1);
+  }
+  int column_num = chunk.column_num();
+  for ( int i = 0 ; i < column_num ; i++ ) {
+    int col_index = chunk.column_ids(i);
+    Column *col = chunk.column_ptr(i);
+    for ( int slot : slots ) {
+      char *field_data = get_field_data(slot, col_index);
+      col->append_one(field_data);
+    }
+  }
+  return RC::SUCCESS;
+  
+  /*
   int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
   int totalcols =  chunk.column_num();
   for(int i =0; i < totalcols; i++){
     int id = chunk.column_ids(i);
     //int fieldLen = get_field_len(id);
-    Column *currCol = chunk.column_ptr(id);
+    Column *currCol = chunk.column_ptr(i);
     //currCol.
     if(id==0){
       currCol->append(frame_->data() + page_header_->data_offset, page_header_->record_num);
@@ -539,6 +561,7 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
     
   }
   return RC::SUCCESS;
+  */
   //exit(-1);
 }
 
