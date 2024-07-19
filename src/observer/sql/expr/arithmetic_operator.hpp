@@ -173,10 +173,16 @@ struct MultiplyOperator
   static inline __m256 operation(__m256 left, __m256 right) { 
     return _mm256_mul_ps(left, right);
    }
-
+  
   static inline __m256i operation(__m256i left, __m256i right) { 
-    return _mm256_mul_epi32(left, right);
-   }
+    __m256 left_float   = _mm256_cvtepi32_ps(left);
+    __m256 right_float  = _mm256_cvtepi32_ps(right);
+    __m256 result_float = _mm256_mul_ps(left_float, right_float);
+    return _mm256_cvttps_epi32(result_float);
+  }
+  //static inline __m256i operation(__m256i left, __m256i right) { 
+  //  return _mm256_mul_epi32(left, right);
+  // }
 #endif
 };
 
