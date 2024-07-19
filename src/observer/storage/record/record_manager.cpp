@@ -549,19 +549,19 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
   int *colIdx = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
   int totalcols =  chunk.column_num();
   for(int i =0; i < totalcols; i++){
-    int id = chunk.column_ids(i);
+    //int id = chunk.column_ids(i);
     //int fieldLen = get_field_len(id);
     Column *currCol = chunk.column_ptr(i);
     //currCol.
-    if(id==0){
+    if(i==0){
       currCol->append(frame_->data() + page_header_->data_offset, page_header_->record_num);
     }else{
-      currCol->append(frame_->data() + page_header_->data_offset + colIdx[id-1], page_header_->record_num);
+      currCol->append(frame_->data() + colIdx[i-1], page_header_->record_num);
     }
-    
-  }
-  return RC::SUCCESS;
-  */
+    */
+  //}
+  //return RC::SUCCESS;
+  
   //exit(-1);
 }
 
