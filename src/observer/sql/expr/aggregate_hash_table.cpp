@@ -212,7 +212,7 @@ template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
 {
   // your code here
-  exit(-1);
+  // exit(-1);
 
   // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
   // key[SIMD_WIDTH],value[SIMD_WIDTH] 表示当前循环中处理的键值对。
@@ -234,6 +234,113 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   //7. 通过标量线性探测，处理剩余键值对
 
   // resize_if_need();
+
+  int inv[SIMD_WIDTH];
+  int off[SIMD_WIDTH];
+  memset(inv, -1, sizeof(inv)); // Initialize inv to -1
+  memset(off, 0, sizeof(off));  // Initialize off to 0
+
+  int i = 0;
+  __m256i keys = _mm256_setzero_si256();
+  __m256i values = _mm256_setzero_si256();
+  __m256i hash_vals = _mm256_setzero_si256();
+  __m256i table_keys;
+  while (i + SIMD_WIDTH <= len) {
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+          if (inv[j] == -1) {//0 for need further key comparison
+              keys = insert_value(keys, input_keys[i], j);
+              values = insert_value(values, input_values[i], j);
+              inv[j] = 0;
+              ++i;
+          }
+      }
+
+      // Calculate hash values
+      
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+        if(inv[j] != -1) {
+          int key = mm256_extract_epi32_var_indx(keys, j);
+          int hash_val = compute_hash(key + off[j]);
+          hash_vals = insert_value(hash_vals, hash_val, j);
+        }
+      }
+
+      // aggregate
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+          if(inv[j] == -1) continue;
+          int key = mm256_extract_epi32_var_indx(keys, j);
+          int hash_val = compute_hash(key + off[j]); // if off[j] > 0 means a collision
+
+          if (keys_[hash_val] == key) {
+              values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
+              inv[j] = -1;
+              off[j] = 0;
+          }
+      }
+
+      // Gather operation
+      table_keys = _mm256_i32gather_epi32(keys_.data(), hash_vals, 4);
+
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+          if(inv[j] == -1) continue;
+          int key = mm256_extract_epi32_var_indx(keys, j);
+          int table_key = mm256_extract_epi32_var_indx(table_keys, j);
+          int hash_val = mm256_extract_epi32_var_indx(hash_vals, j);
+
+          if(table_key == EMPTY_KEY) {
+              if(keys_[hash_val] != EMPTY_KEY && keys_[hash_val] != key) {
+                off[j]++;
+              } else if(keys_[hash_val] != EMPTY_KEY && keys_[hash_val] == key) {
+                values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
+                inv[j] = -1; // Mark as done
+                off[j] = 0;
+              } else {
+                // std::cout << "key " << key << "insert into empty " << hash_val << std::endl;
+                keys_[hash_val] = key;
+                values_[hash_val] = mm256_extract_epi32_var_indx(values, j);
+                inv[j] = -1; // Mark as done
+                off[j] = 0;
+                size_++;
+              }
+          } else {
+              off[j]++;
+          }
+      }
+  }
+
+  for (int j = 0; j < SIMD_WIDTH; ++j) {
+      if(inv[j] == -1) continue;
+      int key = mm256_extract_epi32_var_indx(keys, j);
+      int hash_val = compute_hash(key + off[j]);
+
+      if (keys_[hash_val] == key) {
+          values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
+          inv[j] = -1; // Mark as done
+          off[j] = 0;
+      }
+  }
+
+  // Process remaining elements
+  while (i < len) {
+      int key = input_keys[i];
+      V value = input_values[i];
+      int hash_val = compute_hash(key);
+
+      while (keys_[hash_val] != key && keys_[hash_val] != EMPTY_KEY) {
+          hash_val = (hash_val + 1) % capacity_;
+      }
+
+      if (keys_[hash_val] == key) {
+          values_[hash_val] += value;
+      } else {
+          keys_[hash_val] = key;
+          values_[hash_val] = value;
+          size_++;
+      }
+      ++i;
+  }
+
+  resize_if_need();
 }
 
 template <typename V>

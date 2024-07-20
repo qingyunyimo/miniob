@@ -142,6 +142,23 @@ public:
   int capacity() { return capacity_; }
   int size() { return size_; }
 
+  int compute_hash(int key) {
+    return key % capacity_;
+  }
+
+  inline __m256i insert_value(__m256i keys, int value, int pos) {
+    switch (pos) {
+        case 0: return _mm256_insert_epi32(keys, value, 0);
+        case 1: return _mm256_insert_epi32(keys, value, 1);
+        case 2: return _mm256_insert_epi32(keys, value, 2);
+        case 3: return _mm256_insert_epi32(keys, value, 3);
+        case 4: return _mm256_insert_epi32(keys, value, 4);
+        case 5: return _mm256_insert_epi32(keys, value, 5);
+        case 6: return _mm256_insert_epi32(keys, value, 6);
+        case 7: return _mm256_insert_epi32(keys, value, 7);
+        default: return keys; // No insertion if pos is out of range
+    }
+  }
 private:
   /**
    * @brief 将键值对以批量的形式写入哈希表中，这里参考了论文
