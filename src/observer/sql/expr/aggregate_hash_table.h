@@ -143,7 +143,7 @@ public:
   int size() { return size_; }
 
   int compute_hash(int key) {
-    return key % capacity_;
+    return (key % capacity_ + capacity_) % capacity_;
   }
 
   inline __m256i insert_value(__m256i keys, int value, int pos) {
