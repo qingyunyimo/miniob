@@ -64,7 +64,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %parse-param { void * scanner }
 
 //标识tokens
-%token  SEMICOLON
+%token  SUM
+        SEMICOLON
         BY
         CREATE
         DROP
@@ -530,6 +531,9 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
+    | SUM LBRACE expression RBRACE {
+      $$ = new UnboundAggregateExpr("SUM", $3);
+    }
     // your code here
     ;
 
@@ -661,6 +665,10 @@ group_by:
     /* empty */
     {
       $$ = nullptr;
+    }
+    | GROUP BY expression_list
+    {
+              $$ = $3;
     }
     ;
 load_data_stmt:
